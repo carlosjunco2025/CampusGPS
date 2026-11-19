@@ -1,14 +1,18 @@
 package com.junco.campusgps.ui
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
@@ -16,6 +20,7 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.compose.rememberUpdatedMarkerState
+import com.junco.campusgps.R
 import com.junco.campusgps.model.Lugar
 import com.junco.campusgps.model.LugarConDistancia
 import com.junco.campusgps.model.UbicacionUi
@@ -59,11 +64,26 @@ fun MapaUbicacion(
         }
     }
 
+    // Si el tema de la app está oscuro, el mapa usa el estilo oscuro de res/raw
+    val contexto = LocalContext.current
+    val temaOscuro = isSystemInDarkTheme()
+    val estiloMapa = remember(temaOscuro) {
+        if (temaOscuro) {
+            MapStyleOptions.loadRawResourceStyle(contexto, R.raw.mapa_oscuro)
+        } else {
+            null
+        }
+    }
+
     GoogleMap(
         modifier = modifier,
         cameraPositionState = camara,
         // Activa el punto azul de ubicación nativo solo si hay permiso
-        properties = MapProperties(isMyLocationEnabled = tienePermiso),
+        // y aplica el estilo oscuro cuando corresponde
+        properties = MapProperties(
+            isMyLocationEnabled = tienePermiso,
+            mapStyleOptions = estiloMapa
+        ),
         // Activa el botón nativo para ir a mi ubicación solo si hay permiso
         uiSettings = MapUiSettings(myLocationButtonEnabled = tienePermiso)
     ) {
