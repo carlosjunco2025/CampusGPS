@@ -36,8 +36,9 @@ fun MapaUbicacion(
 
     // Cuando llega la ubicación o cambia el radio, la cámara viaja a mi posición
     // con el zoom necesario para que se vea todo el círculo
+    // (si hay un lugar seleccionado, de eso se encarga el otro LaunchedEffect)
     LaunchedEffect(estado, radioMetros) {
-        if (estado is UbicacionUi.Lista) {
+        if (estado is UbicacionUi.Lista && seleccionado == null) {
             val miPosicion = LatLng(estado.posicion.latitud, estado.posicion.longitud)
             camara.animate(CameraUpdateFactory.newLatLngZoom(miPosicion, zoomParaRadio(radioMetros)))
         }

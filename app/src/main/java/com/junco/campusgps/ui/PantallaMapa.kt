@@ -49,11 +49,15 @@ fun PantallaMapa(vm: MapaViewModel) {
     val categoriaSeleccionada by vm.categoriaSeleccionada.collectAsState()
     val radioMetros by vm.radioMetros.collectAsState()
     val lugaresEnRadio by vm.lugaresEnRadio.collectAsState()
+    val siguiendo by vm.siguiendo.collectAsState()
 
     val contexto = LocalContext.current
 
     // Estado de Compose para rastrear si el usuario concedió el permiso de ubicación
     var tienePermiso by remember { mutableStateOf(tienePermisoUbicacion(contexto)) }
+
+    // Recuerda si el permiso se pidió desde el botón Iniciar seguimiento
+    var seguirTrasPermiso by remember { mutableStateOf(false) }
 
     val lanzador = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -61,7 +65,7 @@ fun PantallaMapa(vm: MapaViewModel) {
         val concedido = resultado.values.any { it }
         tienePermiso = concedido
         if (concedido) {
-            vm.buscar()
+            if (seguirTrasPermiso) vm.iniciarSeguimiento() else vm.buscar()
         } else {
             vm.permisoDenegado()
         }
@@ -70,9 +74,31 @@ fun PantallaMapa(vm: MapaViewModel) {
     fun alPulsar() {
         val concedido = tienePermisoUbicacion(contexto)
         tienePermiso = concedido
+        seguirTrasPermiso = false
 
         if (concedido) {
             vm.buscar()
+        } else {
+            lanzador.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
+
+    fun alPulsarSeguimiento() {
+        if (siguiendo) {
+            vm.detenerSeguimiento()
+            return
+        }
+        val concedido = tienePermisoUbicacion(contexto)
+        tienePermiso = concedido
+        seguirTrasPermiso = true
+
+        if (concedido) {
+            vm.iniciarSeguimiento()
         } else {
             lanzador.launch(
                 arrayOf(
@@ -102,11 +128,30 @@ fun PantallaMapa(vm: MapaViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Button(
-                onClick = { alPulsar() },
-                enabled = estado !is UbicacionUi.Buscando
+            // Botón principal y botón de seguimiento en vivo en la misma fila
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Obtener mi ubicación")
+                Button(
+                    onClick = { alPulsar() },
+                    // Mientras sigo en vivo la ubicación ya se actualiza sola
+                    enabled = estado !is UbicacionUi.Buscando && !siguiendo
+                ) {
+                    Text("Obtener mi ubicación")
+                }
+
+                OutlinedButton(onClick = { alPulsarSeguimiento() }) {
+                    Text(if (siguiendo) "Detener" else "Iniciar seguimiento")
+                }
+            }
+
+            if (siguiendo) {
+                Text(
+                    text = "Siguiendo tu ubicación en vivo…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
 
             when (val e = estado) {

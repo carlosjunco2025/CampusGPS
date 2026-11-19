@@ -11,10 +11,12 @@ import com.junco.campusgps.model.Posicion
 import com.junco.campusgps.model.TipoError
 import com.junco.campusgps.model.UbicacionUi
 import com.junco.campusgps.util.distanciaMetros
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -108,7 +110,49 @@ class MapaViewModel(
         }
     }
 
+    // Seguimiento en vivo: true mientras la app está escuchando mi ubicación
+    private val _siguiendo = MutableStateFlow(false)
+    val siguiendo: StateFlow<Boolean> = _siguiendo.asStateFlow()
+
+    // Guarda la corrutina del seguimiento para poder cancelarla con Detener
+    private var trabajoSeguimiento: Job? = null
+
+    fun iniciarSeguimiento() {
+        if (!ubicacionRepo.playServicesDisponible()) {
+            _estado.value = UbicacionUi.Error(
+                "Este dispositivo no tiene Google Play Services",
+                TipoError.SIN_PLAY_SERVICES
+            )
+            return
+        }
+        if (trabajoSeguimiento != null) return
+
+        _siguiendo.value = true
+        // Mientras camino la cámara me sigue a mí, no a un lugar seleccionado
+        _seleccionado.value = null
+        trabajoSeguimiento = viewModelScope.launch {
+            ubicacionRepo.seguirPosicion()
+                .catch { e ->
+                    _estado.value = errorDe(e)
+                    _siguiendo.value = false
+                    trabajoSeguimiento = null
+                }
+                .collect { posicion ->
+                    // Cada posición nueva actualiza el mapa, las distancias y el más cercano
+                    _estado.value = UbicacionUi.Lista(posicion)
+                    actualizarDistancias(posicion)
+                }
+        }
+    }
+
+    fun detenerSeguimiento() {
+        trabajoSeguimiento?.cancel()
+        trabajoSeguimiento = null
+        _siguiendo.value = false
+    }
+
     fun permisoDenegado() {
+        detenerSeguimiento()
         _estado.value = UbicacionUi.Error(
             "Sin permiso de ubicación no puedo mostrar dónde estás",
             TipoError.SIN_PERMISO
