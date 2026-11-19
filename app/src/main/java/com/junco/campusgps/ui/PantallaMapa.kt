@@ -50,6 +50,7 @@ fun PantallaMapa(vm: MapaViewModel) {
     val radioMetros by vm.radioMetros.collectAsState()
     val lugaresEnRadio by vm.lugaresEnRadio.collectAsState()
     val siguiendo by vm.siguiendo.collectAsState()
+    val ultimoVisitado by vm.ultimoVisitado.collectAsState()
 
     val contexto = LocalContext.current
 
@@ -168,6 +169,15 @@ fun PantallaMapa(vm: MapaViewModel) {
                     )
                 }
                 is UbicacionUi.Error -> MensajeError(error = e, onReintentar = { alPulsar() })
+            }
+
+            // Último lugar visitado, recuperado de DataStore al abrir la app
+            val ultimo = ultimoVisitado
+            if (ultimo != null) {
+                Text(
+                    text = "Último lugar visitado: ${ultimo.nombre}",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
 
             // Primera fila: chips de filtro por categoría (con su propio scroll)

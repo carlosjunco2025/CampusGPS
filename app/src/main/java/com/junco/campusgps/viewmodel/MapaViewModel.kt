@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.junco.campusgps.data.LugaresRepository
+import com.junco.campusgps.data.PreferenciasRepository
 import com.junco.campusgps.data.UbicacionRepository
 import com.junco.campusgps.model.Lugar
 import com.junco.campusgps.model.LugarConDistancia
@@ -18,13 +19,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class MapaViewModel(
     private val ubicacionRepo: UbicacionRepository,
-    private val lugaresRepo: LugaresRepository
+    private val lugaresRepo: LugaresRepository,
+    private val preferenciasRepo: PreferenciasRepository
 ) : ViewModel() {
 
     private val _estado = MutableStateFlow<UbicacionUi>(UbicacionUi.Inicial)
@@ -100,6 +103,8 @@ class MapaViewModel(
         }
 
         _estado.value = UbicacionUi.Buscando
+        // Al buscar de nuevo suelto la selección para que la cámara vuelva a mi posición
+        _seleccionado.value = null
         viewModelScope.launch {
             ubicacionRepo.obtenerPosicion()
                 .onSuccess {
@@ -175,6 +180,33 @@ class MapaViewModel(
     // Guarda el lugar que el usuario tocó en la lista
     fun seleccionar(id: Int?) {
         _seleccionado.value = id
+        // Además lo guardo en DataStore para recuperarlo cuando se vuelva a abrir la app
+        if (id != null) {
+            _ultimoVisitado.value = id
+            viewModelScope.launch {
+                preferenciasRepo.guardarUltimoLugar(id)
+            }
+        }
+    }
+
+    // Id del último lugar visitado (el que se guardó en DataStore)
+    private val _ultimoVisitado = MutableStateFlow<Int?>(null)
+
+    // El lugar completo del último visitado, para mostrar su nombre en la pantalla
+    val ultimoVisitado: StateFlow<Lugar?> = _ultimoVisitado
+        .map { id -> lugaresRepo.obtenerLugares().find { it.id == id } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    init {
+        // Al abrir la app leo una sola vez el último lugar guardado y lo dejo seleccionado,
+        // así el mapa viaja hasta él como si el usuario lo hubiera tocado
+        viewModelScope.launch {
+            val id = preferenciasRepo.ultimoLugar.first()
+            if (id != null) {
+                _ultimoVisitado.value = id
+                _seleccionado.value = id
+            }
+        }
     }
 
     // El más cercano es el primero de la lista (filtrada) que ya tiene distancia
