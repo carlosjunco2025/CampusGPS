@@ -4,10 +4,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.rememberCameraPositionState
@@ -22,6 +24,7 @@ fun MapaUbicacion(
     lugares: List<LugarConDistancia>,
     seleccionado: Int?,
     masCercano: Lugar?,
+    radioMetros: Int,
     modifier: Modifier = Modifier
 ) {
     val camara = rememberCameraPositionState {
@@ -48,12 +51,24 @@ fun MapaUbicacion(
 
     GoogleMap(modifier = modifier, cameraPositionState = camara) {
         if (estado is UbicacionUi.Lista) {
+            val miPosicion = LatLng(estado.posicion.latitud, estado.posicion.longitud)
+
             Marker(
-                state = rememberUpdatedMarkerState(
-                    position = LatLng(estado.posicion.latitud, estado.posicion.longitud)
-                ),
+                state = rememberUpdatedMarkerState(position = miPosicion),
                 title = "Estás aquí"
             )
+
+            // Círculo que representa el radio de cercanía alrededor de mi ubicación
+            // (con "Sin radio" no se dibuja)
+            if (radioMetros > 0) {
+                Circle(
+                    center = miPosicion,
+                    radius = radioMetros.toDouble(),
+                    fillColor = Color(0x333949AB), // Índigo semitransparente
+                    strokeColor = Color(0xFF3949AB), // Borde índigo
+                    strokeWidth = 2f
+                )
+            }
         }
 
         // Un marcador por cada lugar: verde el más cercano, azul los demás
