@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.junco.campusgps.model.LugarConDistancia
+import com.junco.campusgps.ui.theme.VerdeCerca
 import com.junco.campusgps.util.formatearDistancia
 
 @Composable
@@ -55,7 +56,7 @@ fun ListaLugares(
                     }
                 ),
                 border = if (esSeleccionado) {
-                    BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                    BorderStroke(2.dp, MaterialTheme.colorScheme.tertiary)
                 } else {
                     null
                 }
@@ -83,7 +84,7 @@ fun ListaLugares(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Dentro de tu radio",
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = VerdeCerca,
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Bold
                                 )
