@@ -31,11 +31,12 @@ fun MapaUbicacion(
         position = CameraPosition.fromLatLngZoom(LatLng(-12.0440, -76.9525), 12f)
     }
 
-    // Cuando llega la ubicación, la cámara viaja a mi posición
-    LaunchedEffect(estado) {
+    // Cuando llega la ubicación o cambia el radio, la cámara viaja a mi posición
+    // con el zoom necesario para que se vea todo el círculo
+    LaunchedEffect(estado, radioMetros) {
         if (estado is UbicacionUi.Lista) {
             val miPosicion = LatLng(estado.posicion.latitud, estado.posicion.longitud)
-            camara.animate(CameraUpdateFactory.newLatLngZoom(miPosicion, 16f))
+            camara.animate(CameraUpdateFactory.newLatLngZoom(miPosicion, zoomParaRadio(radioMetros)))
         }
     }
 
@@ -50,7 +51,7 @@ fun MapaUbicacion(
             )
         } else if (estado is UbicacionUi.Lista) {
             val miPosicion = LatLng(estado.posicion.latitud, estado.posicion.longitud)
-            camara.animate(CameraUpdateFactory.newLatLngZoom(miPosicion, 16f))
+            camara.animate(CameraUpdateFactory.newLatLngZoom(miPosicion, zoomParaRadio(radioMetros)))
         }
     }
 
@@ -94,5 +95,15 @@ fun MapaUbicacion(
                 )
             }
         }
+    }
+}
+
+// Zoom del mapa según el radio: mientras más grande el radio, más lejos la cámara
+private fun zoomParaRadio(radioMetros: Int): Float {
+    return when {
+        radioMetros == 0 -> 16f // sin radio: el mismo zoom del Paso 3
+        radioMetros <= 100 -> 17f
+        radioMetros <= 200 -> 16f
+        else -> 15f
     }
 }
